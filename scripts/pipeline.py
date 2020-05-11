@@ -1315,11 +1315,17 @@ def main(o=None):
                                         EvolutionSolFile=CurrentDDkMSSolName,
                                         MergeSmooth=o['smoothing'])
         ##############################################
-
-        separator("AmpPhase deconv")
-        CurrentBaseDicoModelName=ddf_image('image_ampphase1',o['mslist'],
+        if not o['phaseonly']:
+            separator("AmpPhase deconv")
+            ImageName = 'image_ampphase1'
+            apply = 'AP'
+        else:
+            separator("Phase2 deconv")
+            ImageName = 'image_phase2'
+            apply = 'P'
+        CurrentBaseDicoModelName=ddf_image(ImageName,o['mslist'],
                                        cleanmask=CurrentMaskName,cleanmode='SSD',
-                                       ddsols=CurrentDDkMSSolName,applysols='AP',majorcycles=1,robust=o['image_robust'],
+                                       ddsols=CurrentDDkMSSolName,applysols=apply,majorcycles=1,robust=o['image_robust'],
                                        colname=colname,peakfactor=0.001,automask=True,
                                        automask_threshold=o['thresholds'][1],
                                        normalization=o['normalize'][0],apply_weights=o['apply_weights'][1],use_weightspectrum=o['use_weightspectrum'],uvrange=uvrange,
@@ -1336,8 +1342,8 @@ def main(o=None):
             stop(2)
 
         separator("Make Mask")
-        CurrentMaskName=make_mask('image_ampphase1.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
-        CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1.DicoModel',CurrentMaskName,'image_ampphase1m_masked.DicoModel',catcher=catcher)
+        CurrentMaskName=make_mask(ImageName+'.app.restored.fits',o['thresholds'][1],external_mask=external_mask,catcher=catcher)
+        CurrentBaseDicoModelName=mask_dicomodel(ImageName+'.DicoModel',CurrentMaskName,ImageName+'m_masked.DicoModel',catcher=catcher)
 
         if not o['skip_di']:
             separator("Second DI calibration")
@@ -1421,7 +1427,10 @@ def main(o=None):
             CurrentBaseDicoModelName=mask_dicomodel('image_ampphase1_di.DicoModel',CurrentMaskName,'image_ampphase1_di_masked.DicoModel',catcher=catcher)
             CurrentImageName= 'image_ampphase1_di'
         else:
-            CurrentImageName = 'image_ampphase1'
+            if not o['phaseonly']:
+                CurrentImageName = 'image_ampphase1'
+            else:
+                CurrentImageName = 'image_phase2'
 
     else:
         # alternative branch of massive if!
@@ -1518,15 +1527,23 @@ def main(o=None):
             ddf_kw['beamsize_minor']=o['final_psf_minor_arcsec']
             ddf_kw['beamsize_pa']=o['final_psf_pa_deg']
 
-    if not o['skip_di']:
-        ImageName = 'image_full_ampphase_di'
+    if not o['phaseonly']:
+        apply = 'AP'
+        if not o['skip_di']:
+            ImageName = 'image_full_ampphase_di'
+        else:
+            ImageName = 'image_full_ampphase'
     else:
-        ImageName = 'image_full_ampphase'
+        apply = 'P'
+        if not o['skip_di']:
+            ImageName = 'image_full_phase_di'
+        else:
+            ImageName = 'image_full_phase'
     
     ddf_image(ImageName,o['full_mslist'],
               cleanmask=CurrentMaskName,
               cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-              applysols='AP',
+              applysols=apply,
               majorcycles=0,
               robust=o['final_robust'],
               colname=colname,use_dicomodel=True,
@@ -1540,17 +1557,14 @@ def main(o=None):
     CurrentMaskName=make_mask(ImageName+'.app.restored.fits',10,external_mask=external_mask,catcher=catcher)
 
     separator("Finish Deconvolution AP (full mslist)")
-    if not o['skip_di']:
-        ImageName = 'image_full_ampphase_di_m'
-    else:
-        ImageName = 'image_full_ampphase_m'
+    ImageName = ImageName+'_m'
     CurrentBaseDicoModelName=ddf_image(ImageName,o['full_mslist'],
                                        cleanmask=CurrentMaskName,
                                        reuse_psf=True,
                                        reuse_dirty=True,
                                        robust=o['final_robust'],
                                        cleanmode='SSD',ddsols=CurrentDDkMSSolName,
-                                       applysols='AP',majorcycles=1,
+                                       applysols=apply,majorcycles=1,
                                        colname=colname,use_dicomodel=True,
                                        dicomodel_base=CurrentBaseDicoModelName,
                                        peakfactor=0.001,automask=True,
