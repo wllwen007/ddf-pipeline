@@ -63,8 +63,9 @@ def summary(o):
         f.write('DDF version was '+ddf_version()+'\n')
         from killMS.Other.logo import report_version as killms_version
         f.write('killMS version was '+killms_version()+'\n')
-        from DynSpecMS import dynspecms_version
-        f.write('DynSpecMS version was '+dynspecms_version.version()+'\n\n')
+        if o['do_dynspec']:
+            from DynSpecMS import dynspecms_version
+            f.write('DynSpecMS version was '+dynspecms_version.version()+'\n\n')
         f.write('Options dictionary was as follows:\n')
         for k in o:
             f.write("%-20s : %s\n" % (k,str(o[k])))
@@ -226,7 +227,10 @@ def ddf_image(imagename,mslist,cleanmask=None,cleanmode='HMP',ddsols=None,applys
 
     if 'Misc-IgnoreDeprecationMarking' in keywords:
         runcommand+=' --Misc-IgnoreDeprecationMarking=1'
-    
+
+    if 'Beam-At' in keywords:
+        runcommand+=' --Beam-At=%s'%options['beam_at']
+        
     if PredictSettings is None:
         runcommand += " --Output-Mode=Clean"
     else:
@@ -477,7 +481,7 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             
             if 'DebugPdb' in keywords:
                 runcommand+=' --DebugPdb=0'
-            
+                
             if robust is None:
                 runcommand+=' --Weighting Natural'
             else:
@@ -499,6 +503,9 @@ def killms_data(imagename,mslist,outsols,clusterfile=None,colname='CORRECTED_DAT
             if DISettings is None:
                 runcommand+=' --NChanSols %i' % NChanSols
                 runcommand+=' --BeamMode LOFAR --LOFARBeamMode=A --DDFCacheDir=%s'%cache_dir
+                if 'BeamAt' in keywords:
+                    runcommand+=' --BeamAt=%s'%options['beam_at']
+
                 if clusterfile is not None:
                     runcommand+=' --NodesFile '+clusterfile
                 if dicomodel is not None:
@@ -1888,7 +1895,10 @@ def main(o=None):
 
     if o['compress_ms']:
         separator('Compressing MS for archive')
-        os.system('archivems.sh .')
+        if o['skip_di']:
+            os.system('archivems.sh . '+o['colname'])
+        else:
+            os.system('archivems.sh . DATA_DI_CORRECTED')
                 
     separator('Write summary and tidy up')
     summary(o)
